@@ -7,6 +7,11 @@ import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
 import java.util.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 
 class SoundService : Service() {
 
@@ -29,7 +34,31 @@ class SoundService : Service() {
         }
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "salawat_channel",
+                "Salawat Reminder",
+                NotificationManager.IMPORTANCE_LOW
+            )
+
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        createNotificationChannel()
+
+        val notification = Notification.Builder(this, "salawat_channel")
+            .setContentTitle("Salawat Reminder")
+            .setContentText("Running...")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .build()
+
+        startForeground(1, notification)
+
         val uriString = intent?.getStringExtra("soundUri")
 
         soundUri = if (uriString != null) {

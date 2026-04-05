@@ -11,6 +11,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import com.example.salawatreminder.SoundService
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.core.content.ContextCompat
+import androidx.work.ExistingPeriodicWorkPolicy
+import java.util.concurrent.TimeUnit
+import androidx.work.*
+import com.example.salawatreminder.SoundWorker
 
 @Composable
 fun MainScreen() {
@@ -49,12 +54,21 @@ fun MainScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+
         Button(onClick = {
-            val serviceIntent = Intent(context, SoundService::class.java).apply {
-                putExtra("soundUri", soundUri?.toString())
-                putExtra("interval", interval.toIntOrNull() ?: 1)
-            }
-            context.startService(serviceIntent)
+            val intervalMinutes = (interval.toLongOrNull() ?: 15).coerceAtLeast(15)
+
+            val workRequest = PeriodicWorkRequestBuilder<SoundWorker>(
+                intervalMinutes, TimeUnit.MINUTES
+            ).setInputData(
+                workDataOf("soundUri" to soundUri?.toString())
+            ).build()
+
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "salawat_work",
+                ExistingPeriodicWorkPolicy.UPDATE,
+                workRequest
+            )
         }) {
             Text("Start")
         }
@@ -62,7 +76,7 @@ fun MainScreen() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = {
-            context.stopService(Intent(context, SoundService::class.java))
+            WorkManager.getInstance(context).cancelUniqueWork("salawat_work")
         }) {
             Text("Stop")
         }
