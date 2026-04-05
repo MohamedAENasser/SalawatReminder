@@ -1,12 +1,15 @@
 package com.example.salawatreminder
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalContext
@@ -15,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainScreen() {
 
@@ -75,24 +79,13 @@ fun MainScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = {
-            val intervalMinutes = (interval.toLongOrNull() ?: 15).coerceAtLeast(15)
-
-            val workData = workDataOf(
-                "soundUri" to soundUri?.toString(),
-                "startQuietHour" to startQuietHour,
-                "endQuietHour" to endQuietHour
-            )
-
-            val workRequest = PeriodicWorkRequestBuilder<SoundWorker>(
-                intervalMinutes, TimeUnit.MINUTES
-            ).setInputData(workData)
-                .build()
-
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                "salawat_work",
-                ExistingPeriodicWorkPolicy.UPDATE,
-                workRequest
-            )
+            val intent = Intent(context, ForegroundSoundService::class.java).apply {
+                putExtra("soundUri", soundUri)
+                putExtra("intervalMinutes", (interval.toLongOrNull() ?: 15).coerceAtLeast(1))
+                putExtra("startQuietHour", startQuietHour)
+                putExtra("endQuietHour", endQuietHour)
+            }
+            context.startForegroundService(intent)
         }, modifier = Modifier.fillMaxWidth()) {
             Text("Start")
         }
@@ -100,7 +93,8 @@ fun MainScreen() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = {
-            WorkManager.getInstance(context).cancelUniqueWork("salawat_work")
+            val intent = Intent(context, ForegroundSoundService::class.java)
+            context.stopService(intent)
         }, modifier = Modifier.fillMaxWidth()) {
             Text("Stop")
         }
