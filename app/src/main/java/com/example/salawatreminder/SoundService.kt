@@ -54,15 +54,18 @@ class SoundService : Service() {
 
     private fun playSound(uriString: String?) {
         try {
-            val uri: Uri = if (!uriString.isNullOrEmpty()) {
-                Uri.parse(uriString)
+            // MediaPlayer.create() is required for raw resources — it calls prepare() internally.
+            // For user-picked external URIs, we must use setDataSource() + prepare() instead.
+            mediaPlayer = if (uriString.isNullOrEmpty()) {
+                MediaPlayer.create(applicationContext, R.raw.default_sound)
             } else {
-                Uri.parse("android.resource://${packageName}/${R.raw.default_sound}")
+                MediaPlayer().apply {
+                    setDataSource(applicationContext, Uri.parse(uriString))
+                    prepare()
+                }
             }
 
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(applicationContext, uri)
-                prepare()
+            mediaPlayer?.apply {
                 setOnCompletionListener {
                     Log.d("SoundService", "Sound done, releasing")
                     it.release()
